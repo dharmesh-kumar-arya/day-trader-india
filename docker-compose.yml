@@ -1,0 +1,52 @@
+# ==============================================================================
+# Day Trader India - Docker Compose Configuration
+# Usage:
+#   docker compose up -d --build
+#   docker compose logs -f
+#   docker compose down
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # FastAPI Algorithmic Engine & Broker Gateway (Port 8000)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: daytrader-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=Asia/Kolkata
+      - PYTHONUNBUFFERED=1
+      - APP_ENV=production
+    volumes:
+      # Persistent SQLite trade journal, active positions, and saved credentials
+      - ./backend/data:/app/data
+    networks:
+      - daytrader-net
+
+  # ----------------------------------------------------------------------------
+  # React 19 Trading Terminal (Nginx Reverse Proxy on Port 5173)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: daytrader-frontend
+    restart: unless-stopped
+    ports:
+      # Maps host port 5173 to Nginx port 80 inside the container
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - daytrader-net
+
+networks:
+  daytrader-net:
+    name: daytrader-network
+    driver: bridge

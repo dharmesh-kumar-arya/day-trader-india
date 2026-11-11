@@ -109,12 +109,30 @@ flowchart TD
 
 ## 🚀 Quickstart
 
-### Option A: One-Command Launch (Recommended)
+### Option A: Docker Compose (Instant Containerized Deployment)
+
+The easiest and most reliable way to launch Day Trader India is with Docker. Both the FastAPI backend and the Nginx-accelerated React frontend start with one command:
 
 ```bash
 git clone https://github.com/<your-username>/day-trader-india.git
 cd day-trader-india
 
+# Launch platform in background
+docker compose up -d --build
+```
+
+- **Web Terminal**: [http://localhost:5173](http://localhost:5173)
+- **FastAPI Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Follow Logs**: `docker compose logs -f`
+- **Stop Platform**: `docker compose down`
+
+*Note: Your SQLite trade journal and credentials are mapped to `./backend/data` on your host machine, ensuring your data persists across container updates.*
+
+---
+
+### Option B: Local Bash Script (Direct Host Execution)
+
+```bash
 # Make startup script executable and launch
 chmod +x run.sh
 ./run.sh
@@ -125,7 +143,7 @@ chmod +x run.sh
 
 ---
 
-### Option B: Manual Setup
+### Option C: Manual Setup
 
 #### 1. Backend Setup (FastAPI)
 ```bash

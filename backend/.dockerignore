@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/*.db-journal
+dhan_config.json
+.git
+.gitignore
+.DS_Store
+*.log
+tests/

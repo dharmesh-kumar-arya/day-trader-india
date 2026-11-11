@@ -19,7 +19,10 @@ from app.db.database import (
     get_today_trades_stats
 )
 
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "dhan_config.json")
+_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+DATA_CONFIG_FILE = os.path.join(_DATA_DIR, "dhan_config.json")
+LEGACY_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "dhan_config.json")
+CONFIG_FILE = DATA_CONFIG_FILE if os.path.exists(_DATA_DIR) else LEGACY_CONFIG_FILE
 
 # In-memory Paper Trading Portfolio state
 _paper_state = {
@@ -54,8 +57,14 @@ class DhanService:
 
     def _load_persisted_config(self):
         try:
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, "r") as f:
+            target_path = None
+            if os.path.exists(DATA_CONFIG_FILE):
+                target_path = DATA_CONFIG_FILE
+            elif os.path.exists(LEGACY_CONFIG_FILE):
+                target_path = LEGACY_CONFIG_FILE
+
+            if target_path:
+                with open(target_path, "r") as f:
                     data = json.load(f)
                     if data.get("client_id"):
                         self.client_id = data["client_id"]
