@@ -312,8 +312,21 @@ export const App: React.FC = () => {
     let reconnectDelay = 1000;
 
     const connectWs = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/market`;
+      const isCap =
+        (window as any).Capacitor !== undefined ||
+        window.location.protocol === 'capacitor:' ||
+        window.location.protocol === 'file:' ||
+        (window.location.hostname === 'localhost' && window.location.port !== '8000' && window.location.port !== '5173');
+      const backendHost = localStorage.getItem('dt_backend_url') || (isCap ? 'http://localhost:8000' : '');
+      let wsUrl = '';
+      if (backendHost) {
+        const wsProtocol = backendHost.startsWith('https') ? 'wss:' : 'ws:';
+        const hostWithoutProto = backendHost.replace(/^https?:\/\//, '');
+        wsUrl = `${wsProtocol}//${hostWithoutProto}/ws/market`;
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}/ws/market`;
+      }
 
       try {
         const ws = new WebSocket(wsUrl);
@@ -965,7 +978,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Analytics Tab Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {activeBottomTab === 'timemachine' && (
                 <TimeMachineLab
                   symbol={selectedSymbol}
