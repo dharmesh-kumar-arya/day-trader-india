@@ -27,3 +27,4 @@ echo "⚡ [4/4] Launching Day Trader India on http://localhost:8000 ..."
 echo "👉 Open your Android Chrome browser and navigate to: http://localhost:8000"
 cd backend
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
