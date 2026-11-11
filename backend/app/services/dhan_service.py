@@ -16,6 +16,7 @@ from app.db.database import (
     get_all_positions,
     get_orders_history,
     close_all_open_positions,
+    close_individual_position,
     get_today_trades_stats
 )
 
@@ -415,6 +416,20 @@ class DhanService:
             "status": "SUCCESS",
             "message": f"All {count} intraday positions flattened and saved to trade journal at 15:15 IST.",
             "flattened_count": count
+        }
+
+    def close_position(self, position_id: str, is_paper: bool = True) -> Dict:
+        """Closes a specific open position with market exit price and accurate statutory taxes."""
+        closed = close_individual_position(position_id=position_id, exit_reason="MANUAL_EXIT")
+        if closed:
+            return {
+                "status": "SUCCESS",
+                "message": f"Position #{closed.get('id') or position_id} ({closed['symbol']}) closed @ ₹{closed['exit_price']}",
+                "position": closed
+            }
+        return {
+            "status": "ERROR",
+            "message": f"Position #{position_id} not found or already closed."
         }
 
 dhan_service = DhanService()

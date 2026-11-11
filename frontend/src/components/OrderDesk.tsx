@@ -79,7 +79,7 @@ export const OrderDesk: React.FC<OrderDeskProps> = ({
   };
 
   return (
-    <div className="h-full bg-[#121722] flex flex-col border-l border-[#242e42] select-none text-xs">
+    <div className="h-full bg-[#121722] flex flex-col border-t lg:border-t-0 lg:border-l border-[#242e42] select-none text-xs">
       {/* Header */}
       <div className="p-3 border-b border-[#242e42] flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -145,6 +145,23 @@ export const OrderDesk: React.FC<OrderDeskProps> = ({
             <span>₹200</span>
             <span>₹5,000</span>
             <span>₹10,000</span>
+          </div>
+          {/* Quick Preset Chips for Touch / Mobile */}
+          <div className="flex items-center space-x-1 mt-2">
+            {[500, 1000, 2000, 5000].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => onChangeMaxRisk(preset)}
+                className={`flex-1 py-1 rounded text-[10px] font-semibold border transition cursor-pointer ${
+                  maxRiskInr === preset
+                    ? 'bg-blue-600 text-white border-blue-500'
+                    : 'bg-[#101520] text-slate-400 border-[#242e42] hover:text-white'
+                }`}
+              >
+                ₹{preset >= 1000 ? `${preset / 1000}k` : preset}
+              </button>
+            ))}
           </div>
         </div>
 

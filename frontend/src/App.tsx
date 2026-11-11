@@ -19,7 +19,7 @@ import {
   RiskChecklistResult,
   Position,
 } from './types';
-import { TrendingUp, Briefcase, Landmark, Newspaper, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { TrendingUp, Briefcase, Landmark, Newspaper, CheckCircle2, AlertTriangle, X, Zap, Flame } from 'lucide-react';
 
 export const App: React.FC = () => {
   // App State with persistence
@@ -39,6 +39,13 @@ export const App: React.FC = () => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isDhanModalOpen, setIsDhanModalOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState<'timemachine' | 'positions' | 'smartmoney' | 'catalysts'>('timemachine');
+  
+  // Responsive mobile navigation tab & desktop panel visibility
+  const [mobileTab, setMobileTab] = useState<'chart' | 'scanner' | 'order' | 'positions' | 'analytics'>('chart');
+  const [isScannerOpen, setIsScannerOpen] = useState(true);
+  const [isOrderDeskOpen, setIsOrderDeskOpen] = useState(true);
+  const [isBottomOpen, setIsBottomOpen] = useState(true);
+
   const [orderToast, setOrderToast] = useState<{
     type: 'success' | 'error';
     title: string;
@@ -134,7 +141,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     let isCancelled = false;
     const fetchScanner = async () => {
-      // Only show full scanning state if we have literally 0 cached results
       if (scannerResults.length === 0) {
         setIsScannerLoading(true);
       }
@@ -251,7 +257,7 @@ export const App: React.FC = () => {
     };
   }, [selectedSymbol, side]);
 
-  // 5. Pre-Flight Risk Check (Debounced by 150ms for buttery-smooth risk budget seek bar sliding)
+  // 5. Pre-Flight Risk Check (Debounced by 150ms for smooth risk budget seek bar sliding)
   useEffect(() => {
     if (!tradePlan || tradePlan.symbol !== selectedSymbol) return;
 
@@ -295,19 +301,19 @@ export const App: React.FC = () => {
     }
   };
 
-  // Ultra-fast auto-refresh chart candles every 3.5 seconds for real-time live trading (pauses when tab inactive)
+  // Auto-refresh chart candles every 3.5 seconds for real-time live trading (pauses when tab inactive)
   useEffect(() => {
     const liveChartInterval = setInterval(() => {
-      if (document.hidden) return; // Inactive tab: pause polling to save battery and network
+      if (document.hidden) return;
       handleRefreshChart();
     }, 3500);
     return () => clearInterval(liveChartInterval);
   }, [selectedSymbol, selectedInterval]);
 
-  // Auto-refresh active positions every 5 seconds for live MTM P&L (pauses when tab inactive)
+  // Auto-refresh active positions every 5 seconds for live MTM P&L
   useEffect(() => {
     const livePosInterval = setInterval(async () => {
-      if (document.hidden) return; // Inactive tab: pause polling
+      if (document.hidden) return;
       try {
         const posRes = await fetch(`/api/dhan/positions?is_paper=${isPaper}`).then((r) => r.json());
         if (posRes?.positions) setPositions(posRes.positions);
@@ -316,7 +322,7 @@ export const App: React.FC = () => {
     return () => clearInterval(livePosInterval);
   }, [isPaper]);
 
-  // Tab visibility change handler: when waking up from background, sync without full reload
+  // Tab visibility change handler
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -352,7 +358,7 @@ export const App: React.FC = () => {
       }).then((r) => r.json());
 
       setSimulation(res);
-      playAlertSound(1046, 0.3); // High C chime
+      playAlertSound(1046, 0.3);
     } catch (err) {
       console.error('Simulation error:', err);
     } finally {
@@ -384,18 +390,18 @@ export const App: React.FC = () => {
       }).then((r) => r.json());
 
       if (res.status === 'SUCCESS') {
-        playAlertSound(1318, 0.4); // E chime for order execution
+        playAlertSound(1318, 0.4);
         setOrderToast({
           type: 'success',
           title: isPaper ? `Paper ${side} Executed` : `Live Dhan ${side} Placed`,
           message: res.message || `${shares} shares of ${selectedSymbol} @ ₹${price}`
         });
-        // Refresh positions
         const posRes = await fetch(`/api/dhan/positions?is_paper=${isPaper}`).then((r) => r.json());
         if (posRes.positions) setPositions(posRes.positions);
         setActiveBottomTab('positions');
+        setMobileTab('positions');
       } else {
-        playAlertSound(300, 0.35); // Low chime for failure
+        playAlertSound(300, 0.35);
         setOrderToast({
           type: 'error',
           title: isPaper ? 'Paper Order Rejected' : 'Dhan Order Rejected',
@@ -416,12 +422,54 @@ export const App: React.FC = () => {
   const handleFlattenAll = async () => {
     try {
       await fetch(`/api/dhan/flatten?is_paper=${isPaper}`, { method: 'POST' });
-      playAlertSound(440, 0.5); // A chime for flatten
+      playAlertSound(440, 0.5);
       setPositions([]);
     } catch (err) {
       console.error('Flatten error:', err);
     }
   };
+
+  // Exit Individual Position
+  const handleExitPosition = async (positionId: string) => {
+    try {
+      const res = await fetch(`/api/dhan/positions/${positionId}/exit?is_paper=${isPaper}`, {
+        method: 'POST',
+      }).then((r) => r.json());
+
+      if (res.status === 'SUCCESS') {
+        playAlertSound(440, 0.4);
+        setOrderToast({
+          type: 'success',
+          title: 'Position Squared Off',
+          message: res.message || `Position #${positionId} closed successfully.`
+        });
+        const posRes = await fetch(`/api/dhan/positions?is_paper=${isPaper}`).then((r) => r.json());
+        if (posRes?.positions) setPositions(posRes.positions);
+      } else {
+        playAlertSound(300, 0.35);
+        setOrderToast({
+          type: 'error',
+          title: 'Exit Failed',
+          message: res.message || 'Could not close position.'
+        });
+      }
+    } catch (err: any) {
+      setOrderToast({
+        type: 'error',
+        title: 'Network Error',
+        message: err?.message || 'Failed to reach trading backend.'
+      });
+    }
+  };
+
+  // Auto-dismiss toast notification after 4.5 seconds
+  useEffect(() => {
+    if (!orderToast) return;
+    const timer = setTimeout(() => {
+      setOrderToast(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [orderToast]);
 
   // Save Dhan Credentials
   const handleSaveCredentials = async (cId: string, aToken: string) => {
@@ -442,10 +490,12 @@ export const App: React.FC = () => {
     try {
       localStorage.setItem('dt_selected_symbol', sym);
     } catch {}
+    // Seamless UX on mobile/tablet: auto-switch to chart when a stock is clicked
+    setMobileTab('chart');
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#0b0e14] text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen h-[100dvh] w-screen bg-[#0b0e14] text-slate-100 overflow-hidden font-sans">
       {/* Top Header */}
       <Header
         marketStatus={marketStatus}
@@ -455,56 +505,68 @@ export const App: React.FC = () => {
         onOpenDhanModal={() => setIsDhanModalOpen(true)}
         audioEnabled={audioEnabled}
         onToggleAudio={() => setAudioEnabled(!audioEnabled)}
+        isScannerOpen={isScannerOpen}
+        onToggleScanner={() => setIsScannerOpen(!isScannerOpen)}
+        isOrderDeskOpen={isOrderDeskOpen}
+        onToggleOrderDesk={() => setIsOrderDeskOpen(!isOrderDeskOpen)}
+        isBottomOpen={isBottomOpen}
+        onToggleBottom={() => setIsBottomOpen(!isBottomOpen)}
       />
 
-      {/* Toast Notification for Orders */}
+      {/* Toast Notification for Orders & Breakouts */}
       {orderToast && (
-        <div className="fixed top-12 right-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-top-3 duration-200">
+        <div className="fixed bottom-16 sm:bottom-auto sm:top-16 left-3 right-3 sm:left-auto sm:right-6 z-50 max-w-sm w-auto animate-in fade-in slide-in-from-bottom-3 sm:slide-in-from-top-3 duration-200 pointer-events-auto">
           <div
-            className={`p-3.5 rounded-xl border shadow-2xl flex items-start space-x-3 backdrop-blur-md ${
+            className={`p-3 rounded-xl border shadow-2xl flex items-start space-x-2.5 backdrop-blur-md ${
               orderToast.type === 'success'
-                ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-100'
-                : 'bg-rose-950/90 border-rose-500/50 text-rose-100'
+                ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-100 shadow-emerald-950/50'
+                : 'bg-rose-950/95 border-rose-500/50 text-rose-100 shadow-rose-950/50'
             }`}
           >
             {orderToast.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             ) : (
-              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
             )}
             <div className="flex-1 text-xs">
-              <div className="font-bold">{orderToast.title}</div>
-              <div className="text-slate-300 mt-0.5 leading-relaxed">{orderToast.message}</div>
+              <div className="font-bold flex items-center justify-between">
+                <span>{orderToast.title}</span>
+              </div>
+              <div className="text-slate-300 mt-0.5 leading-snug text-[11px]">{orderToast.message}</div>
             </div>
             <button
               onClick={() => setOrderToast(null)}
-              className="text-slate-400 hover:text-white cursor-pointer p-0.5"
+              className="text-slate-400 hover:text-white cursor-pointer p-0.5 shrink-0 ml-1"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Workspace Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel: Scanner (width: 320px) */}
-        <div className="w-80 shrink-0 h-full">
-          <ScannerTable
-            results={scannerResults}
-            selectedSymbol={selectedSymbol}
-            onSelectSymbol={handleSelectSymbol}
-            sectors={sectors}
-            selectedSector={selectedSector}
-            onSelectSector={setSelectedSector}
-            isLoading={isScannerLoading}
-          />
-        </div>
+      {/* ======================================================== */}
+      {/* DESKTOP WORKSPACE LAYOUT (Visible on lg: and larger screens) */}
+      {/* ======================================================== */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
+        {/* Left Panel: Scanner (Collapsible) */}
+        {isScannerOpen && (
+          <div className="w-72 xl:w-80 shrink-0 h-full">
+            <ScannerTable
+              results={scannerResults}
+              selectedSymbol={selectedSymbol}
+              onSelectSymbol={handleSelectSymbol}
+              sectors={sectors}
+              selectedSector={selectedSector}
+              onSelectSector={setSelectedSector}
+              isLoading={isScannerLoading}
+            />
+          </div>
+        )}
 
         {/* Center Panel: Chart & Bottom Analytics */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-          {/* Main Chart Station (62% height) */}
-          <div className="h-[62%] w-full">
+          {/* Main Chart Station */}
+          <div className={`${isBottomOpen ? 'h-[62%]' : 'h-full'} w-full transition-all duration-150`}>
             <ChartStation
               symbol={selectedSymbol}
               candles={candles}
@@ -519,57 +581,247 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Bottom Analytics Tabs (38% height) */}
-          <div className="h-[38%] flex flex-col bg-[#121722] border-t border-[#242e42] overflow-hidden">
-            {/* Tabs Header */}
-            <div className="h-9 px-3 bg-[#0f131a] border-b border-[#242e42] flex items-center space-x-1 select-none">
+          {/* Bottom Analytics Tabs (Collapsible) */}
+          {isBottomOpen && (
+            <div className="h-[38%] flex flex-col bg-[#121722] border-t border-[#242e42] overflow-hidden">
+              {/* Tabs Header */}
+              <div className="h-9 px-3 bg-[#0f131a] border-b border-[#242e42] flex items-center space-x-1 select-none overflow-x-auto no-scrollbar shrink-0">
+                <button
+                  onClick={() => setActiveBottomTab('timemachine')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition whitespace-nowrap cursor-pointer ${
+                    activeBottomTab === 'timemachine'
+                      ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>Time Machine (Monte Carlo)</span>
+                </button>
+                <button
+                  onClick={() => setActiveBottomTab('positions')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition whitespace-nowrap cursor-pointer ${
+                    activeBottomTab === 'positions'
+                      ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>Positions & Journal ({positions.length})</span>
+                </button>
+                <button
+                  onClick={() => setActiveBottomTab('smartmoney')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition whitespace-nowrap cursor-pointer ${
+                    activeBottomTab === 'smartmoney'
+                      ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Landmark className="w-3.5 h-3.5" />
+                  <span>Smart Money & Bulk Deals</span>
+                </button>
+                <button
+                  onClick={() => setActiveBottomTab('catalysts')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition whitespace-nowrap cursor-pointer ${
+                    activeBottomTab === 'catalysts'
+                      ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Newspaper className="w-3.5 h-3.5" />
+                  <span>Corporate Announcements</span>
+                </button>
+              </div>
+
+              {/* Tab Body */}
+              <div className="flex-1 overflow-hidden">
+                {activeBottomTab === 'timemachine' && (
+                  <TimeMachineLab
+                    symbol={selectedSymbol}
+                    simulation={simulation}
+                    onRunSimulation={handleRunSimulation}
+                    isLoading={isSimLoading}
+                  />
+                )}
+                {activeBottomTab === 'positions' && (
+                  <PositionsTable
+                    positions={positions}
+                    onFlattenAll={handleFlattenAll}
+                    secondsToSquareoff={marketStatus?.seconds_to_squareoff || 0}
+                    onExitPosition={handleExitPosition}
+                    onSelectSymbol={handleSelectSymbol}
+                  />
+                )}
+                {activeBottomTab === 'smartmoney' && (
+                  <SmartMoneyBoard flows={fiiDiiFlows} bulkDeals={bulkDeals} />
+                )}
+                {activeBottomTab === 'catalysts' && (
+                  <CatalystFeed announcements={announcements} />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Panel: Order Desk & Pre-Flight Risk (Collapsible) */}
+        {isOrderDeskOpen && (
+          <div className="w-[320px] xl:w-[340px] shrink-0 h-full">
+            <OrderDesk
+              tradePlan={tradePlan}
+              riskCheck={riskCheck}
+              dhanStatus={dhanStatus}
+              isPaper={isPaper}
+              side={side}
+              onChangeSide={setSide}
+              onExecuteOrder={handleExecuteOrder}
+              isLoading={isChartLoading}
+              maxRiskInr={maxRiskInr}
+              onChangeMaxRisk={setMaxRiskInr}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ======================================================== */}
+      {/* MOBILE / TABLET WORKSPACE LAYOUT (Visible on < lg screens) */}
+      {/* ======================================================== */}
+      <div className="lg:hidden flex-1 flex flex-col overflow-hidden">
+        {/* Mobile Tab: Scanner */}
+        {mobileTab === 'scanner' && (
+          <div className="flex-1 h-full overflow-hidden">
+            <ScannerTable
+              results={scannerResults}
+              selectedSymbol={selectedSymbol}
+              onSelectSymbol={handleSelectSymbol}
+              sectors={sectors}
+              selectedSector={selectedSector}
+              onSelectSector={setSelectedSector}
+              isLoading={isScannerLoading}
+            />
+          </div>
+        )}
+
+        {/* Mobile Tab: Chart (with quick buy/sell action bar) */}
+        {mobileTab === 'chart' && (
+          <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+            <div className="flex-1 w-full overflow-hidden">
+              <ChartStation
+                symbol={selectedSymbol}
+                candles={candles}
+                interval={selectedInterval}
+                onChangeInterval={setSelectedInterval}
+                openingRange={openingRange}
+                tradePlan={tradePlan}
+                simulation={simulation}
+                riskCheck={riskCheck}
+                isLoading={isChartLoading}
+                onRefresh={handleRefreshChart}
+              />
+            </div>
+
+            {/* Floating Quick Action Bar for Instant Trading on Mobile */}
+            <div className="bg-[#121722]/95 backdrop-blur-md border-t border-[#242e42] px-3.5 py-2 flex items-center justify-between z-20 shrink-0">
+              <div className="flex items-center space-x-2">
+                <span className="font-bold text-xs text-white">{selectedSymbol}</span>
+                <span className="font-mono text-xs font-semibold text-emerald-400">
+                  ₹{candles.length > 0 ? candles[candles.length - 1].close.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setSide('BUY');
+                    setMobileTab('order');
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-xs flex items-center space-x-1 shadow-md shadow-emerald-600/20 cursor-pointer active:scale-95 transition"
+                >
+                  <span>BUY</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSide('SELL');
+                    setMobileTab('order');
+                  }}
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded font-bold text-xs flex items-center space-x-1 shadow-md shadow-rose-600/20 cursor-pointer active:scale-95 transition"
+                >
+                  <span>SELL</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Tab: Order Desk */}
+        {mobileTab === 'order' && (
+          <div className="flex-1 h-full overflow-hidden">
+            <OrderDesk
+              tradePlan={tradePlan}
+              riskCheck={riskCheck}
+              dhanStatus={dhanStatus}
+              isPaper={isPaper}
+              side={side}
+              onChangeSide={setSide}
+              onExecuteOrder={handleExecuteOrder}
+              isLoading={isChartLoading}
+              maxRiskInr={maxRiskInr}
+              onChangeMaxRisk={setMaxRiskInr}
+            />
+          </div>
+        )}
+
+        {/* Mobile Tab: Positions & Journal */}
+        {mobileTab === 'positions' && (
+          <div className="flex-1 h-full overflow-hidden">
+            <PositionsTable
+              positions={positions}
+              onFlattenAll={handleFlattenAll}
+              secondsToSquareoff={marketStatus?.seconds_to_squareoff || 0}
+              onExitPosition={handleExitPosition}
+              onSelectSymbol={handleSelectSymbol}
+            />
+          </div>
+        )}
+
+        {/* Mobile Tab: Analytics (Time Machine, Smart Money, Announcements) */}
+        {mobileTab === 'analytics' && (
+          <div className="flex-1 flex flex-col h-full bg-[#121722] overflow-hidden">
+            {/* Analytics Tab Switcher */}
+            <div className="h-10 px-2 bg-[#0f131a] border-b border-[#242e42] flex items-center space-x-1 overflow-x-auto no-scrollbar shrink-0 select-none">
               <button
                 onClick={() => setActiveBottomTab('timemachine')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded whitespace-nowrap cursor-pointer transition ${
                   activeBottomTab === 'timemachine'
-                    ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>Time Machine (Monte Carlo)</span>
-              </button>
-              <button
-                onClick={() => setActiveBottomTab('positions')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition ${
-                  activeBottomTab === 'positions'
-                    ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>Positions & Journal ({positions.length})</span>
+                <span>Time Machine</span>
               </button>
               <button
                 onClick={() => setActiveBottomTab('smartmoney')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded whitespace-nowrap cursor-pointer transition ${
                   activeBottomTab === 'smartmoney'
-                    ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Landmark className="w-3.5 h-3.5" />
-                <span>Smart Money & Bulk Deals</span>
+                <span>Smart Money</span>
               </button>
               <button
                 onClick={() => setActiveBottomTab('catalysts')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-t transition ${
+                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded whitespace-nowrap cursor-pointer transition ${
                   activeBottomTab === 'catalysts'
-                    ? 'bg-[#121722] text-blue-400 border-t-2 border-blue-500'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Newspaper className="w-3.5 h-3.5" />
-                <span>Corporate Announcements</span>
+                <span>Announcements</span>
               </button>
             </div>
 
-            {/* Tab Body */}
+            {/* Analytics Tab Content */}
             <div className="flex-1 overflow-hidden">
               {activeBottomTab === 'timemachine' && (
                 <TimeMachineLab
@@ -577,13 +829,6 @@ export const App: React.FC = () => {
                   simulation={simulation}
                   onRunSimulation={handleRunSimulation}
                   isLoading={isSimLoading}
-                />
-              )}
-              {activeBottomTab === 'positions' && (
-                <PositionsTable
-                  positions={positions}
-                  onFlattenAll={handleFlattenAll}
-                  secondsToSquareoff={marketStatus?.seconds_to_squareoff || 0}
                 />
               )}
               {activeBottomTab === 'smartmoney' && (
@@ -594,23 +839,61 @@ export const App: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Right Panel: Order Desk & Pre-Flight Risk (width: 340px) */}
-        <div className="w-[340px] shrink-0 h-full">
-          <OrderDesk
-            tradePlan={tradePlan}
-            riskCheck={riskCheck}
-            dhanStatus={dhanStatus}
-            isPaper={isPaper}
-            side={side}
-            onChangeSide={setSide}
-            onExecuteOrder={handleExecuteOrder}
-            isLoading={isChartLoading}
-            maxRiskInr={maxRiskInr}
-            onChangeMaxRisk={setMaxRiskInr}
-          />
-        </div>
+        {/* Mobile Bottom Navigation Bar */}
+        <nav className="h-14 bg-[#0f131a] border-t border-[#242e42] grid grid-cols-5 items-center px-1 shrink-0 z-30 select-none pb-[env(safe-area-inset-bottom)]">
+          <button
+            onClick={() => setMobileTab('scanner')}
+            className={`flex flex-col items-center justify-center py-1 transition cursor-pointer ${
+              mobileTab === 'scanner' ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Flame className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">Scanner</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('chart')}
+            className={`flex flex-col items-center justify-center py-1 transition cursor-pointer ${
+              mobileTab === 'chart' ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">Chart</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('order')}
+            className={`flex flex-col items-center justify-center py-1 transition cursor-pointer ${
+              mobileTab === 'order' ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Zap className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">Trade</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('positions')}
+            className={`flex flex-col items-center justify-center py-1 transition cursor-pointer relative ${
+              mobileTab === 'positions' ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div className="relative">
+              <Briefcase className="w-4 h-4 mb-0.5" />
+              {positions.length > 0 && (
+                <span className="absolute -top-1 -right-2 h-2 w-2 rounded-full bg-blue-500 ring-2 ring-[#0f131a]" />
+              )}
+            </div>
+            <span className="text-[10px]">Positions</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('analytics')}
+            className={`flex flex-col items-center justify-center py-1 transition cursor-pointer ${
+              mobileTab === 'analytics' ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Landmark className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">Analytics</span>
+          </button>
+        </nav>
       </div>
 
       {/* Dhan Credentials Configuration Modal */}
@@ -623,5 +906,5 @@ export const App: React.FC = () => {
     </div>
   );
 };
-export default App;
 
+export default App;

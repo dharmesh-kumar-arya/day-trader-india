@@ -34,7 +34,7 @@ export const ScannerTable: React.FC<ScannerTableProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-full bg-[#121722] border-r border-[#242e42] select-none">
+    <div className="flex flex-col h-full bg-[#121722] border-b lg:border-b-0 lg:border-r border-[#242e42] select-none">
       {/* Top Controls */}
       <div className="p-3 border-b border-[#242e42] space-y-2.5">
         <div className="flex items-center justify-between">
@@ -48,7 +48,7 @@ export const ScannerTable: React.FC<ScannerTableProps> = ({
           </div>
           <button
             onClick={() => setOnlySetups(!onlySetups)}
-            className={`px-2 py-0.5 text-[11px] font-medium rounded border transition ${
+            className={`px-2 py-0.5 text-[11px] font-medium rounded border transition cursor-pointer ${
               onlySetups
                 ? 'bg-blue-600/30 text-blue-300 border-blue-500'
                 : 'bg-[#1a2232] text-slate-400 border-[#242e42] hover:text-white'
@@ -64,12 +64,12 @@ export const ScannerTable: React.FC<ScannerTableProps> = ({
             onClick={() => onSelectSymbol(results[0].symbol)}
             className="w-full py-1.5 px-2.5 bg-gradient-to-r from-emerald-600/30 to-blue-600/30 hover:from-emerald-600/40 hover:to-blue-600/40 border border-emerald-500/50 rounded flex items-center justify-between text-xs font-bold text-white transition cursor-pointer shadow-sm"
           >
-            <div className="flex items-center space-x-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-300">Top Setup:</span>
-              <span className="font-mono text-emerald-300 font-bold">{results[0].symbol}</span>
+            <div className="flex items-center space-x-1.5 min-w-0">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="text-slate-300 shrink-0">Top Setup:</span>
+              <span className="font-mono text-emerald-300 font-bold truncate">{results[0].symbol}</span>
             </div>
-            <span className={`px-1.5 py-0.2 rounded font-extrabold text-[10px] ${
+            <span className={`px-1.5 py-0.2 rounded font-extrabold text-[10px] shrink-0 ml-1 ${
               results[0].grade === 'A+' ? 'bg-emerald-500 text-black' : 'bg-blue-500 text-white'
             }`}>
               {results[0].grade} ({results[0].score} pts)
@@ -90,7 +90,7 @@ export const ScannerTable: React.FC<ScannerTableProps> = ({
         </div>
 
         {/* Sector Tabs */}
-        <div className="flex items-center space-x-1 overflow-x-auto pb-1 text-[11px]">
+        <div className="flex items-center space-x-1 overflow-x-auto pb-1 text-[11px] no-scrollbar">
           {sectors.map((sec) => (
             <button
               key={sec}

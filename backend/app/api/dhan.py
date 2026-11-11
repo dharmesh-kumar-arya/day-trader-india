@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 from app.services.dhan_service import dhan_service
-from app.db.database import get_all_positions, get_orders_history, get_today_trades_stats
+from app.db.database import get_all_positions, get_orders_history, get_today_trades_stats, get_position_by_id
 
 router = APIRouter(prefix="/api/dhan", tags=["Dhan Broker"])
 
@@ -49,6 +49,19 @@ def execute_order(req: OrderRequest):
 def get_open_positions(is_paper: bool = True):
     """Returns active day-trade positions."""
     return {"positions": dhan_service.get_positions(is_paper=is_paper)}
+
+@router.post("/positions/{position_id}/exit")
+def exit_individual_position(position_id: str, is_paper: bool = True):
+    """Exits/squares off an individual active position."""
+    return dhan_service.close_position(position_id=position_id, is_paper=is_paper)
+
+@router.get("/positions/{position_id}")
+def get_single_position(position_id: str):
+    """Returns complete details of a specific position or trade, including tax breakdowns."""
+    pos = get_position_by_id(position_id=position_id)
+    if not pos:
+        return {"status": "ERROR", "message": "Position not found."}
+    return {"status": "SUCCESS", "position": pos}
 
 @router.post("/flatten")
 def auto_flatten(is_paper: bool = True):

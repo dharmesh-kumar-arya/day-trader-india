@@ -62,8 +62,8 @@ export const TimeMachineLab: React.FC<TimeMachineLabProps> = ({
   return (
     <div className="h-full bg-[#121722] p-3 flex flex-col select-none border-t border-[#242e42] overflow-y-auto">
       {/* Header & Verdict */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#242e42]">
-        <div className="flex items-center space-x-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#242e42]">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
           <span className="text-xs font-bold text-white uppercase tracking-wider">Time Machine</span>
           <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-600/20 text-blue-300 border border-blue-500/40">
             {simulation.symbol}
@@ -102,7 +102,7 @@ export const TimeMachineLab: React.FC<TimeMachineLabProps> = ({
       </div>
 
       {/* Main Stats Grid */}
-      <div className="grid grid-cols-4 gap-2 my-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-2.5">
         <div className="p-2 rounded bg-[#1a2232] border border-[#242e42] text-center">
           <div className="text-[10px] text-slate-400 font-medium">Target First (Win)</div>
           <div className="text-base font-bold text-emerald-400 mt-0.5">{probabilities.target_first_pct}%</div>
@@ -125,7 +125,7 @@ export const TimeMachineLab: React.FC<TimeMachineLabProps> = ({
       </div>
 
       {/* Fan Chart & Outcome Distribution */}
-      <div className="grid grid-cols-2 gap-3 flex-1 min-h-[120px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-[130px]">
         {/* Fan Chart Projection */}
         <div className="p-2 rounded bg-[#1a2232] border border-[#242e42] flex flex-col">
           <div className="text-[10px] font-bold text-slate-400 mb-1 flex items-center justify-between">

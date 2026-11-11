@@ -163,5 +163,6 @@ export interface Position {
   status: string;
   exit_reason?: string | null;
   is_paper: boolean | number;
+  charges_breakdown?: any;
 }
 

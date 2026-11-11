@@ -22,21 +22,21 @@ interface SmartMoneyBoardProps {
 export const SmartMoneyBoard: React.FC<SmartMoneyBoardProps> = ({ flows, bulkDeals }) => {
   return (
     <div className="h-full bg-[#121722] p-3 flex flex-col border-t border-[#242e42] select-none text-xs">
-      <div className="flex items-center justify-between pb-2 border-b border-[#242e42]">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#242e42]">
         <div className="flex items-center space-x-2">
-          <Landmark className="w-4 h-4 text-amber-400" />
+          <Landmark className="w-4 h-4 text-amber-400 shrink-0" />
           <span className="font-bold text-white uppercase tracking-wider">Smart Money & Bulk Deals</span>
         </div>
         {flows && (
           <div className="flex items-center space-x-3 text-[11px]">
             <div>
-              <span className="text-slate-400">FII Net: </span>
+              <span className="text-slate-400">FII: </span>
               <span className={`font-mono font-bold ${flows.fii_net_flow_cr >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {flows.fii_net_flow_cr >= 0 ? '+' : ''}₹{flows.fii_net_flow_cr.toLocaleString('en-IN')} Cr
               </span>
             </div>
             <div>
-              <span className="text-slate-400">DII Net: </span>
+              <span className="text-slate-400">DII: </span>
               <span className={`font-mono font-bold ${flows.dii_net_flow_cr >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {flows.dii_net_flow_cr >= 0 ? '+' : ''}₹{flows.dii_net_flow_cr.toLocaleString('en-IN')} Cr
               </span>
@@ -45,8 +45,8 @@ export const SmartMoneyBoard: React.FC<SmartMoneyBoardProps> = ({ flows, bulkDea
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto mt-2">
-        <table className="w-full text-left">
+      <div className="flex-1 overflow-y-auto mt-2 overflow-x-auto w-full">
+        <table className="w-full text-left min-w-[500px]">
           <thead>
             <tr className="text-slate-500 text-[10px] border-b border-[#242e42]">
               <th className="pb-1">STOCK</th>

@@ -300,7 +300,8 @@ def close_all_open_positions(exit_reason: str = "AUTO_SQUAREOFF_1515", is_paper:
             buy_p = pos["buy_price"]
             curr_p = pos["current_price"]
             qty = pos["quantity"]
-            gross_pnl = round((curr_p - buy_p) * qty, 2)
+            side = pos.get("side", "BUY").upper()
+            gross_pnl = round((buy_p - curr_p) * qty, 2) if side == "SELL" else round((curr_p - buy_p) * qty, 2)
             
             # Accurate Indian taxes
             charges = calculate_intraday_charges(buy_price=buy_p, sell_price=curr_p, quantity=qty)
@@ -322,6 +323,84 @@ def close_all_open_positions(exit_reason: str = "AUTO_SQUAREOFF_1515", is_paper:
 
         conn.commit()
         return closed_count
+    finally:
+        conn.close()
+
+def close_individual_position(position_id: str, exit_reason: str = "MANUAL_EXIT") -> Optional[Dict]:
+    """Closes a single position by position_id or id with live price and accurate Indian statutory taxes."""
+    from app.services.charges_calculator import calculate_intraday_charges
+    from app.services.market_data import get_symbol_candles
+    conn = get_connection()
+    now_str = now_ist().strftime("%Y-%m-%d %H:%M:%S IST")
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM positions WHERE (position_id = ? OR CAST(id AS TEXT) = ?) AND status = 'OPEN'", (str(position_id), str(position_id)))
+        row = cur.fetchone()
+        if not row:
+            return None
+        pos = dict(row)
+        sym = pos["symbol"]
+        qty = pos["quantity"]
+        buy_p = pos["buy_price"]
+        side = pos.get("side", "BUY").upper()
+
+        candles = get_symbol_candles(sym, interval="1m", range_str="1d")
+        latest_price = candles[-1]["close"] if candles else pos["current_price"]
+
+        if side == "SELL":
+            gross_pnl = round((buy_p - latest_price) * qty, 2)
+        else:
+            gross_pnl = round((latest_price - buy_p) * qty, 2)
+
+        charges = calculate_intraday_charges(buy_price=buy_p, sell_price=latest_price, quantity=qty)
+        tot_charges = charges["total_charges"]
+        net_pnl = round(gross_pnl - tot_charges, 2)
+
+        cur.execute("""
+            UPDATE positions
+            SET status = 'CLOSED',
+                current_price = ?,
+                exit_price = ?,
+                realized_pnl_inr = ?,
+                total_charges_inr = ?,
+                net_pnl_inr = ?,
+                exit_reason = ?,
+                closed_at = ?
+            WHERE id = ?
+        """, (latest_price, latest_price, gross_pnl, tot_charges, net_pnl, exit_reason, now_str, pos["id"]))
+        conn.commit()
+
+        pos["status"] = "CLOSED"
+        pos["current_price"] = latest_price
+        pos["exit_price"] = latest_price
+        pos["realized_pnl_inr"] = gross_pnl
+        pos["total_charges_inr"] = tot_charges
+        pos["net_pnl_inr"] = net_pnl
+        pos["exit_reason"] = exit_reason
+        pos["closed_at"] = now_str
+        pos["charges_breakdown"] = charges
+        return pos
+    finally:
+        conn.close()
+
+def get_position_by_id(position_id: str) -> Optional[Dict]:
+    """Retrieves full details of a position by position_id or integer id."""
+    from app.services.charges_calculator import calculate_intraday_charges
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM positions WHERE position_id = ? OR CAST(id AS TEXT) = ?", (str(position_id), str(position_id)))
+        row = cur.fetchone()
+        if not row:
+            return None
+        pos = dict(row)
+        exit_p = pos.get("exit_price") or pos.get("current_price") or pos["buy_price"]
+        pos["charges_breakdown"] = calculate_intraday_charges(
+            buy_price=pos["buy_price"],
+            sell_price=exit_p,
+            quantity=pos["quantity"]
+        )
+        return pos
     finally:
         conn.close()
 

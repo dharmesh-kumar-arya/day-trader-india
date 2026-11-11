@@ -142,8 +142,25 @@ export const ChartStation: React.FC<ChartStationProps> = ({
 
     window.addEventListener('resize', handleResize);
 
+    // ResizeObserver ensures chart resizes smoothly when sidebars/drawers toggle without window resize
+    let resizeObserver: ResizeObserver | null = null;
+    if (chartContainerRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (chartInstanceRef.current && entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+            chartInstanceRef.current.applyOptions({
+              width: entry.contentRect.width,
+              height: entry.contentRect.height,
+            });
+          }
+        }
+      });
+      resizeObserver.observe(chartContainerRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (resizeObserver) resizeObserver.disconnect();
       chart.remove();
     };
   }, []);
@@ -303,8 +320,8 @@ export const ChartStation: React.FC<ChartStationProps> = ({
   return (
     <div className="flex flex-col h-full bg-[#0b0e14] relative select-none">
       {/* Chart Header Toolbar */}
-      <div className="h-11 px-4 border-b border-[#242e42] bg-[#121722] flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+      <div className="min-h-11 px-2.5 sm:px-4 py-1.5 border-b border-[#242e42] bg-[#121722] flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <span className="font-bold text-sm text-white">{symbol}</span>
           <span className="font-mono text-sm font-semibold text-emerald-400">
             ₹{currentPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -313,7 +330,7 @@ export const ChartStation: React.FC<ChartStationProps> = ({
           {/* ORB Status Pill */}
           {openingRange && (
             <div
-              className={`flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border ${
+              className={`flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold border ${
                 isTriggered
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
@@ -322,32 +339,33 @@ export const ChartStation: React.FC<ChartStationProps> = ({
               <Target className="w-3 h-3 inline" />
               <span>
                 {isTriggered
-                  ? `ORB BREAKOUT @ ₹${openingRange.breakout_price}`
-                  : `ORB FORMING (High: ₹${openingRange.or_high})`}
+                  ? `ORB ₹${openingRange.breakout_price}`
+                  : `ORB (High: ₹${openingRange.or_high})`}
               </span>
             </div>
           )}
         </div>
 
         {/* Timezone Badge, Live Pulse & Interval Switcher */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
           {/* Candle countdown timer */}
           {secondsRemaining !== null && (
             <div
-              className="flex items-center space-x-1 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-[10px] text-blue-300 font-mono"
+              className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-[10px] text-blue-300 font-mono"
               title="Time remaining until current candle closes"
             >
-              <Clock className="w-3 h-3 text-blue-400" />
+              <Clock className="w-3 h-3 text-blue-400 shrink-0" />
               <span>
-                Bar: {Math.floor(secondsRemaining / 60)}:{String(secondsRemaining % 60).padStart(2, '0')}
+                {Math.floor(secondsRemaining / 60)}:{String(secondsRemaining % 60).padStart(2, '0')}
               </span>
             </div>
           )}
 
           {/* Live pulsing indicator */}
-          <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 font-mono">
+          <div className="hidden xs:flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>LIVE (3s)</span>
+            <span className="hidden sm:inline">LIVE (3s)</span>
+            <span className="sm:hidden">LIVE</span>
           </div>
 
           {onRefresh && (
@@ -360,15 +378,15 @@ export const ChartStation: React.FC<ChartStationProps> = ({
             </button>
           )}
 
-          <span className="text-[10px] text-slate-400 font-mono bg-[#161d2a] px-2 py-0.5 rounded border border-[#242e42]">
+          <span className="hidden xl:inline text-[10px] text-slate-400 font-mono bg-[#161d2a] px-2 py-0.5 rounded border border-[#242e42]">
             Timezone: IST (UTC+5:30)
           </span>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-0.5 sm:space-x-1">
             {['1m', '5m', '15m', '1D'].map((int) => (
               <button
                 key={int}
                 onClick={() => onChangeInterval(int)}
-                className={`px-2.5 py-1 text-xs rounded font-medium transition ${
+                className={`px-2 sm:px-2.5 py-0.5 sm:py-1 text-xs rounded font-medium transition cursor-pointer ${
                   interval === int
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white hover:bg-[#1a2232]'

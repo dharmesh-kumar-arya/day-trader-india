@@ -32,8 +32,8 @@ export const DhanModal: React.FC<DhanModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none">
-      <div className="bg-[#161d2a] border border-[#242e42] rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 select-none">
+      <div className="bg-[#161d2a] border border-[#242e42] rounded-xl max-w-md w-full p-4 sm:p-5 space-y-4 shadow-2xl max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Key className="w-5 h-5 text-amber-400" />

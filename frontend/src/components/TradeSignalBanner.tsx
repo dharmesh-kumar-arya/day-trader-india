@@ -55,23 +55,23 @@ export const TradeSignalBanner: React.FC<TradeSignalBannerProps> = ({
   return (
     <div className="border-b border-[#242e42] select-none text-xs">
       {/* Main Signal Strip */}
-      <div className={`px-4 py-2 border-b flex items-center justify-between transition-colors ${statusColor}`}>
-        <div className="flex items-center space-x-3">
-          <span className={`px-2 py-0.5 rounded text-[11px] uppercase tracking-wider ${badgeColor}`}>
+      <div className={`px-3 sm:px-4 py-2 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors ${statusColor}`}>
+        <div className="flex items-start sm:items-center space-x-2.5 sm:space-x-3">
+          <span className={`px-2 py-0.5 rounded text-[10px] sm:text-[11px] uppercase tracking-wider shrink-0 ${badgeColor}`}>
             TRADE SIGNAL
           </span>
           <div>
             <div className="font-extrabold tracking-wide text-xs">{actionTitle}</div>
-            <div className="text-[11px] opacity-90 mt-0.5">{actionDetail}</div>
+            <div className="text-[10px] sm:text-[11px] opacity-90 mt-0.5 leading-snug">{actionDetail}</div>
           </div>
         </div>
 
         {/* Playbook Guide Toggle */}
         <button
           onClick={() => setShowPlaybook(!showPlaybook)}
-          className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#161d2a] hover:bg-[#20293a] text-slate-300 border border-[#242e42] transition cursor-pointer text-[11px] font-semibold shrink-0 ml-4"
+          className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#161d2a] hover:bg-[#20293a] text-slate-300 border border-[#242e42] transition cursor-pointer text-[10px] sm:text-[11px] font-semibold shrink-0 self-start sm:self-auto"
         >
-          <HelpCircle className="w-3.5 h-3.5 text-blue-400" />
+          <HelpCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />
           <span>How to Trade (4 Steps)</span>
           {showPlaybook ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
@@ -79,7 +79,7 @@ export const TradeSignalBanner: React.FC<TradeSignalBannerProps> = ({
 
       {/* Collapsible 4-Step Playbook Guide */}
       {showPlaybook && (
-        <div className="bg-[#101520] p-3.5 border-b border-[#242e42] grid grid-cols-4 gap-3 text-xs">
+        <div className="bg-[#101520] p-3 sm:p-3.5 border-b border-[#242e42] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
           <div className="p-2.5 rounded bg-[#161d2a] border border-[#242e42]">
             <div className="flex items-center space-x-1.5 text-blue-400 font-bold mb-1">
               <span className="h-4 w-4 rounded-full bg-blue-500 text-black flex items-center justify-center text-[10px]">1</span>
