@@ -12,7 +12,7 @@ npx cap sync android
 
 echo "📦 [3/3] Compiling Android APK with Gradle..."
 cd "$DIR/frontend/android"
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export JAVA_HOME="/opt/homebrew/opt/openjdk@21"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 
 ./gradlew assembleDebug

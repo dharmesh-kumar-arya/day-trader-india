@@ -181,15 +181,30 @@ async def live_market_ticker():
                         orb = await asyncio.to_thread(get_opening_range, sym)
                         if orb and orb.get("status") == "TRIGGERED":
                             _orb_triggered_symbols.add(sym)
+                            breakout_price = orb.get("breakout_price") or orb.get("current_price") or 0.0
                             breakout_msg = {
                                 "type": "ORB_BREAKOUT",
                                 "symbol": sym,
-                                "breakout_price": orb.get("breakout_price") or orb.get("current_price"),
+                                "breakout_price": breakout_price,
                                 "or_high": orb.get("or_high"),
                                 "or_low": orb.get("or_low"),
                                 "time": orb.get("breakout_time") or now_ist().strftime("%H:%M")
                             }
                             await manager.broadcast(breakout_msg)
+
+                            # Send actionable trade signal for native notifications
+                            if breakout_price > 0:
+                                await manager.broadcast({
+                                    "type": "TRADE_SIGNAL",
+                                    "symbol": sym,
+                                    "signal": "BUY",
+                                    "price": breakout_price,
+                                    "target": round(breakout_price * 1.015, 2),
+                                    "stop_loss": round(breakout_price * 0.992, 2),
+                                    "setup": "15m ORB Breakout Confirmed",
+                                    "conviction": 85,
+                                    "time": orb.get("breakout_time") or now_ist().strftime("%H:%M")
+                                })
                     except Exception:
                         pass
 
@@ -276,3 +291,30 @@ async def websocket_endpoint(websocket: WebSocket):
         await manager.disconnect(websocket)
     except Exception:
         await manager.disconnect(websocket)
+
+
+@router.post("/api/ws/broadcast-signal")
+async def trigger_broadcast_trade_signal(payload: dict):
+    """Triggers an immediate trade signal broadcast over WebSocket for push / native notifications."""
+    sym = str(payload.get("symbol", "RELIANCE")).upper()
+    signal = str(payload.get("signal", "BUY")).upper()
+    price = float(payload.get("price", 1335.40))
+    target = float(payload.get("target", round(price * 1.015, 2)))
+    stop_loss = float(payload.get("stop_loss", round(price * 0.992, 2)))
+    setup = str(payload.get("setup", "High Conviction Setup"))
+    conviction = int(payload.get("conviction", 82))
+
+    trade_signal = {
+        "type": "TRADE_SIGNAL",
+        "symbol": sym,
+        "signal": signal,
+        "price": price,
+        "target": target,
+        "stop_loss": stop_loss,
+        "setup": setup,
+        "conviction": conviction,
+        "time": now_ist().strftime("%H:%M")
+    }
+    await manager.broadcast(trade_signal)
+    return {"status": "broadcasted", "signal": trade_signal}
+

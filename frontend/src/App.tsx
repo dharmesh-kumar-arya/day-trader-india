@@ -8,6 +8,12 @@ import { PositionsTable } from './components/PositionsTable';
 import { SmartMoneyBoard } from './components/SmartMoneyBoard';
 import { CatalystFeed } from './components/CatalystFeed';
 import { DhanModal } from './components/DhanModal';
+import { NativeAlertsModal } from './components/NativeAlertsModal';
+import {
+  initNativeFeatures,
+  notifyTradeSignal,
+  onTradeNotificationTapped,
+} from './services/nativeService';
 import {
   MarketStatus,
   DhanStatus,
@@ -38,6 +44,7 @@ export const App: React.FC = () => {
   const [maxRiskInr, setMaxRiskInr] = useState(1000);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isDhanModalOpen, setIsDhanModalOpen] = useState(false);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState<'timemachine' | 'positions' | 'smartmoney' | 'catalysts'>('timemachine');
   
   // Responsive mobile navigation tab & desktop panel visibility
@@ -134,6 +141,26 @@ export const App: React.FC = () => {
     fetchInitialData();
   }, []);
 
+  // Initialize Native Android Notifications & Background Foreground Service
+  useEffect(() => {
+    initNativeFeatures();
+
+    const unsubscribeTap = onTradeNotificationTapped(({ symbol }) => {
+      if (symbol) {
+        setSelectedSymbol(symbol);
+        try {
+          localStorage.setItem('dt_selected_symbol', symbol);
+        } catch {}
+        setMobileTab('order');
+        setIsOrderDeskOpen(true);
+      }
+    });
+
+    return () => {
+      unsubscribeTap();
+    };
+  }, []);
+
   // 2. Fetch Scanner Results (Instant cache display + parallel background refresh)
   useEffect(() => {
     let isCancelled = false;
@@ -149,11 +176,18 @@ export const App: React.FC = () => {
           try {
             localStorage.setItem('dt_scanner_cache', JSON.stringify(res.results));
           } catch {}
-          // Audio chime on new watchlist ORB Breakouts
+          // Audio chime & native notification on new watchlist ORB Breakouts
           for (const item of res.results) {
             if (item.orb_triggered && !triggeredSymbolsRef.current.has(item.symbol)) {
               triggeredSymbolsRef.current.add(item.symbol);
               playAlertSound(880, 0.4);
+              notifyTradeSignal({
+                symbol: item.symbol,
+                signal: 'BUY',
+                price: item.current_price,
+                setup: '15m ORB Breakout',
+                conviction: item.conviction_score || 80,
+              });
               setOrderToast({
                 type: 'success',
                 title: `⚡ ORB Breakout: ${item.symbol}`,
@@ -409,12 +443,42 @@ export const App: React.FC = () => {
 
               case 'ORB_BREAKOUT':
                 if (data.symbol) {
+                  const p = data.breakout_price || 0;
+                  notifyTradeSignal({
+                    symbol: data.symbol,
+                    signal: 'BUY',
+                    price: p,
+                    target: Math.round(p * 1.015 * 100) / 100,
+                    stopLoss: Math.round(p * 0.992 * 100) / 100,
+                    setup: '15m ORB Breakout',
+                    conviction: 85,
+                  });
                   setOrderToast({
                     type: 'success',
                     title: `⚡ ORB Breakout: ${data.symbol}`,
-                    message: `${data.symbol} broke out of Opening Range @ ₹${data.breakout_price}!`,
+                    message: `${data.symbol} broke out of Opening Range @ ₹${p}!`,
                   });
                   playAlertSound(1100, 0.4);
+                }
+                break;
+
+              case 'TRADE_SIGNAL':
+                if (data.symbol) {
+                  notifyTradeSignal({
+                    symbol: data.symbol,
+                    signal: data.signal || 'BUY',
+                    price: data.price || 0,
+                    target: data.target,
+                    stopLoss: data.stop_loss,
+                    setup: data.setup,
+                    conviction: data.conviction,
+                  });
+                  setOrderToast({
+                    type: 'success',
+                    title: `🚨 ${data.signal || 'BUY'} Signal: ${data.symbol}`,
+                    message: `${data.setup || 'Breakout'} @ ₹${data.price} • Tap to trade!`,
+                  });
+                  playAlertSound(1200, 0.4);
                 }
                 break;
 
@@ -657,6 +721,7 @@ export const App: React.FC = () => {
         onOpenDhanModal={() => setIsDhanModalOpen(true)}
         audioEnabled={audioEnabled}
         onToggleAudio={() => setAudioEnabled(!audioEnabled)}
+        onOpenAlertModal={() => setIsAlertModalOpen(true)}
         isScannerOpen={isScannerOpen}
         onToggleScanner={() => setIsScannerOpen(!isScannerOpen)}
         isOrderDeskOpen={isOrderDeskOpen}
@@ -1058,6 +1123,14 @@ export const App: React.FC = () => {
         onClose={() => setIsDhanModalOpen(false)}
         dhanStatus={dhanStatus}
         onSaveCredentials={handleSaveCredentials}
+      />
+
+      {/* Native Alerts & Android Background Engine Modal */}
+      <NativeAlertsModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        selectedSymbol={selectedSymbol}
+        currentPrice={candles[candles.length - 1]?.close || 1335.40}
       />
     </div>
   );

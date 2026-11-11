@@ -1,6 +1,6 @@
 import React from 'react';
 import { MarketStatus, DhanStatus } from '../types';
-import { Activity, ShieldCheck, AlertCircle, Clock, Volume2, VolumeX, Key, PanelLeft, PanelRight, PanelBottom } from 'lucide-react';
+import { Activity, ShieldCheck, AlertCircle, Clock, Volume2, VolumeX, Key, PanelLeft, PanelRight, PanelBottom, BellRing } from 'lucide-react';
 
 interface HeaderProps {
   marketStatus: MarketStatus | null;
@@ -10,6 +10,7 @@ interface HeaderProps {
   onOpenDhanModal: () => void;
   audioEnabled: boolean;
   onToggleAudio: () => void;
+  onOpenAlertModal?: () => void;
   isScannerOpen?: boolean;
   onToggleScanner?: () => void;
   isOrderDeskOpen?: boolean;
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDhanModal,
   audioEnabled,
   onToggleAudio,
+  onOpenAlertModal,
   isScannerOpen = true,
   onToggleScanner,
   isOrderDeskOpen = true,
@@ -162,6 +164,19 @@ export const Header: React.FC<HeaderProps> = ({
             <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
           )}
         </button>
+
+        {/* Native Notification & Background Alerts Modal */}
+        {onOpenAlertModal && (
+          <button
+            onClick={onOpenAlertModal}
+            className="p-1 sm:p-1.5 text-slate-400 hover:text-white rounded-lg border border-[#242e42] hover:bg-[#1a2232] transition cursor-pointer relative"
+            title="Native Trade Alerts & Background Service"
+          >
+            <BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500" />
+          </button>
+        )}
 
         {/* Desktop Layout Toggles */}
         {onToggleBottom && (
