@@ -44,12 +44,14 @@ def root():
         "current_time_ist": now_ist().strftime("%Y-%m-%d %H:%M:%S IST")
     }
 
-# Background Daemon: Automated 15:15 IST Square-Off Worker & DB Init
+# Background Daemon: Automated 15:15 IST Square-Off Worker, DB Init & WebSocket Live Ticker
 @app.on_event("startup")
-async def start_auto_flatten_worker():
+async def start_background_workers():
     from app.db.database import init_db
     init_db()
     asyncio.create_task(_auto_flatten_daemon())
+    from app.api.ws import live_market_ticker
+    asyncio.create_task(live_market_ticker())
 
 async def _auto_flatten_daemon():
     from app.services.dhan_service import dhan_service

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { ScannerTable } from './components/ScannerTable';
 import { ChartStation } from './components/ChartStation';
@@ -80,6 +80,12 @@ export const App: React.FC = () => {
   const [isSimLoading, setIsSimLoading] = useState(false);
   const [isScannerLoading, setIsScannerLoading] = useState(false);
 
+  // Real-Time WebSocket Streaming State
+  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<any>(null);
+  const pingIntervalRef = useRef<any>(null);
+
   // Sound chime synthesizer
   const playAlertSound = (freq = 880, duration = 0.25) => {
     if (!audioEnabled) return;
@@ -126,15 +132,6 @@ export const App: React.FC = () => {
     };
 
     fetchInitialData();
-    const intervalId = setInterval(() => {
-      if (document.hidden) return; // Inactive tab: pause polling
-      fetch('/api/market/status')
-        .then((r) => r.json())
-        .then(setMarketStatus)
-        .catch(() => {});
-    }, 10000);
-
-    return () => clearInterval(intervalId);
   }, []);
 
   // 2. Fetch Scanner Results (Instant cache display + parallel background refresh)
@@ -301,26 +298,168 @@ export const App: React.FC = () => {
     }
   };
 
-  // Auto-refresh chart candles every 3.5 seconds for real-time live trading (pauses when tab inactive)
-  useEffect(() => {
-    const liveChartInterval = setInterval(() => {
-      if (document.hidden) return;
-      handleRefreshChart();
-    }, 3500);
-    return () => clearInterval(liveChartInterval);
-  }, [selectedSymbol, selectedInterval]);
+  // Keep current active selections in refs for WebSocket handlers
+  const selectedSymbolRef = useRef(selectedSymbol);
+  selectedSymbolRef.current = selectedSymbol;
+  const selectedIntervalRef = useRef(selectedInterval);
+  selectedIntervalRef.current = selectedInterval;
+  const isPaperRef = useRef(isPaper);
+  isPaperRef.current = isPaper;
 
-  // Auto-refresh active positions every 5 seconds for live MTM P&L
+  // Persistent WebSocket Connection for zero-latency live market ticks, positions, and alerts
   useEffect(() => {
-    const livePosInterval = setInterval(async () => {
-      if (document.hidden) return;
+    let isMounted = true;
+    let reconnectDelay = 1000;
+
+    const connectWs = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/market`;
+
       try {
-        const posRes = await fetch(`/api/dhan/positions?is_paper=${isPaper}`).then((r) => r.json());
-        if (posRes?.positions) setPositions(posRes.positions);
-      } catch (e) {}
-    }, 5000);
-    return () => clearInterval(livePosInterval);
-  }, [isPaper]);
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          setIsWsConnected(true);
+          reconnectDelay = 1000;
+
+          // Subscribe to currently selected symbol and interval
+          ws.send(
+            JSON.stringify({
+              action: 'subscribe',
+              symbol: selectedSymbolRef.current,
+              interval: selectedIntervalRef.current,
+              is_paper: isPaperRef.current,
+            })
+          );
+
+          // 20-second heartbeat ping to keep connection alive
+          if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ action: 'ping', timestamp: Date.now() }));
+            }
+          }, 20000);
+        };
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            if (!data || !data.type) return;
+
+            switch (data.type) {
+              case 'TICK':
+                if (
+                  data.symbol === selectedSymbolRef.current &&
+                  data.interval === selectedIntervalRef.current &&
+                  data.candle
+                ) {
+                  const tickCandle: Candle = data.candle;
+                  setCandles((prev) => {
+                    if (!prev || prev.length === 0) return [tickCandle];
+                    const last = prev[prev.length - 1];
+                    if (last.time === tickCandle.time) {
+                      // Fast delta update to the forming candle
+                      const updated = [...prev];
+                      updated[updated.length - 1] = {
+                        ...last,
+                        high: Math.max(last.high, tickCandle.high, tickCandle.close),
+                        low: Math.min(last.low, tickCandle.low, tickCandle.close),
+                        close: tickCandle.close,
+                        volume: tickCandle.volume ?? last.volume,
+                      };
+                      return updated;
+                    } else if (tickCandle.time > last.time) {
+                      // Append newly closed bar
+                      return [...prev.slice(-299), tickCandle];
+                    }
+                    return prev;
+                  });
+                }
+                break;
+
+              case 'POSITIONS':
+                if (data.is_paper === undefined || data.is_paper === isPaperRef.current) {
+                  if (Array.isArray(data.positions)) {
+                    setPositions(data.positions);
+                  }
+                }
+                break;
+
+              case 'MARKET_STATUS':
+                if (data.status) {
+                  setMarketStatus(data.status);
+                }
+                break;
+
+              case 'ORB_BREAKOUT':
+                if (data.symbol) {
+                  setOrderToast({
+                    type: 'success',
+                    title: `⚡ ORB Breakout: ${data.symbol}`,
+                    message: `${data.symbol} broke out of Opening Range @ ₹${data.breakout_price}!`,
+                  });
+                  playAlertSound(1100, 0.4);
+                }
+                break;
+
+              case 'PONG':
+                break;
+
+              default:
+                break;
+            }
+          } catch (e) {
+            console.error('[WS] Error processing frame:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          if (!isMounted) return;
+          setIsWsConnected(false);
+          if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+            connectWs();
+          }, reconnectDelay);
+        };
+
+        ws.onerror = () => {
+          ws.close();
+        };
+      } catch (e) {
+        reconnectTimeoutRef.current = setTimeout(connectWs, 3000);
+      }
+    };
+
+    connectWs();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update WebSocket subscription when symbol, interval, or paper mode changes
+  useEffect(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          action: 'subscribe',
+          symbol: selectedSymbol,
+          interval: selectedInterval,
+          is_paper: isPaper,
+        })
+      );
+    }
+  }, [selectedSymbol, selectedInterval, isPaper]);
 
   // Tab visibility change handler
   useEffect(() => {
@@ -578,6 +717,7 @@ export const App: React.FC = () => {
               riskCheck={riskCheck}
               isLoading={isChartLoading}
               onRefresh={handleRefreshChart}
+              isWsConnected={isWsConnected}
             />
           </div>
 
@@ -715,6 +855,7 @@ export const App: React.FC = () => {
                 riskCheck={riskCheck}
                 isLoading={isChartLoading}
                 onRefresh={handleRefreshChart}
+                isWsConnected={isWsConnected}
               />
             </div>
 

@@ -36,8 +36,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost:80/ || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:80/ || exit 1
 
 # Run Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]

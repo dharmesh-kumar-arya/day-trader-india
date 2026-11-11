@@ -15,6 +15,7 @@ interface ChartStationProps {
   riskCheck: RiskChecklistResult | null;
   isLoading: boolean;
   onRefresh?: () => void;
+  isWsConnected?: boolean;
 }
 
 export const ChartStation: React.FC<ChartStationProps> = ({
@@ -28,6 +29,7 @@ export const ChartStation: React.FC<ChartStationProps> = ({
   riskCheck,
   isLoading,
   onRefresh,
+  isWsConnected = false,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<IChartApi | null>(null);
@@ -242,12 +244,28 @@ export const ChartStation: React.FC<ChartStationProps> = ({
       color: c.close >= c.open ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
     }));
 
-    // Safe full dataset update: Lightweight Charts smoothly updates candles without canvas crash
+    // Incremental or full dataset update: Lightweight Charts smoothly updates candles without canvas crash
     try {
-      candlestickSeriesRef.current.setData(formattedCandles);
-      volumeSeriesRef.current.setData(formattedVolumes);
+      if (!isFirstLoadForSymbolRef.current && lastCandlesLengthRef.current === formattedCandles.length) {
+        // Fast-path delta tick update for the latest forming bar
+        const lastCandle = formattedCandles[formattedCandles.length - 1];
+        const lastVol = formattedVolumes[formattedVolumes.length - 1];
+        candlestickSeriesRef.current.update(lastCandle);
+        volumeSeriesRef.current.update(lastVol);
+      } else {
+        candlestickSeriesRef.current.setData(formattedCandles);
+        volumeSeriesRef.current.setData(formattedVolumes);
+        lastCandlesLengthRef.current = formattedCandles.length;
+      }
     } catch (e) {
-      console.warn('Lightweight Charts data update skipped:', e);
+      // Fallback to setData on any mismatch
+      try {
+        candlestickSeriesRef.current.setData(formattedCandles);
+        volumeSeriesRef.current.setData(formattedVolumes);
+        lastCandlesLengthRef.current = formattedCandles.length;
+      } catch (err) {
+        console.warn('Lightweight Charts data update skipped:', err);
+      }
     }
 
     // Only update price lines if levels actually change, preventing axis jumps
@@ -362,10 +380,21 @@ export const ChartStation: React.FC<ChartStationProps> = ({
           )}
 
           {/* Live pulsing indicator */}
-          <div className="hidden xs:flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="hidden sm:inline">LIVE (3s)</span>
-            <span className="sm:hidden">LIVE</span>
+          <div
+            className={`hidden xs:flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2 py-0.5 rounded border text-[10px] font-mono transition-colors ${
+              isWsConnected
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}
+            title={isWsConnected ? 'WebSocket Live Streaming (0s latency)' : 'WebSocket Connecting...'}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isWsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400 animate-ping'
+              }`}
+            />
+            <span className="hidden sm:inline">{isWsConnected ? 'WS LIVE (0s)' : 'CONNECTING'}</span>
+            <span className="sm:hidden">{isWsConnected ? 'WS LIVE' : 'SYNC'}</span>
           </div>
 
           {onRefresh && (

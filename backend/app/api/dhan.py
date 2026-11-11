@@ -1,10 +1,12 @@
 """DhanHQ Execution and Broker Endpoints."""
 
+import asyncio
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 from app.services.dhan_service import dhan_service
 from app.db.database import get_all_positions, get_orders_history, get_today_trades_stats, get_position_by_id
+from app.api.ws import manager
 
 router = APIRouter(prefix="/api/dhan", tags=["Dhan Broker"])
 
@@ -33,9 +35,10 @@ def update_credentials(req: CredentialsRequest):
     return dhan_service.check_connection_status()
 
 @router.post("/order")
-def execute_order(req: OrderRequest):
+async def execute_order(req: OrderRequest):
     """Executes a Bracket Order via Dhan API or Paper Simulator."""
-    return dhan_service.place_order(
+    res = await asyncio.to_thread(
+        dhan_service.place_order,
         symbol=req.symbol,
         side=req.side,
         quantity=req.quantity,
@@ -44,6 +47,9 @@ def execute_order(req: OrderRequest):
         take_profit_price=req.take_profit_price,
         is_paper=req.is_paper
     )
+    if res.get("status") == "SUCCESS":
+        asyncio.create_task(manager.broadcast_positions(is_paper=req.is_paper))
+    return res
 
 @router.get("/positions")
 def get_open_positions(is_paper: bool = True):
@@ -51,9 +57,12 @@ def get_open_positions(is_paper: bool = True):
     return {"positions": dhan_service.get_positions(is_paper=is_paper)}
 
 @router.post("/positions/{position_id}/exit")
-def exit_individual_position(position_id: str, is_paper: bool = True):
+async def exit_individual_position(position_id: str, is_paper: bool = True):
     """Exits/squares off an individual active position."""
-    return dhan_service.close_position(position_id=position_id, is_paper=is_paper)
+    res = await asyncio.to_thread(dhan_service.close_position, position_id=position_id, is_paper=is_paper)
+    if res.get("status") == "SUCCESS":
+        asyncio.create_task(manager.broadcast_positions(is_paper=is_paper))
+    return res
 
 @router.get("/positions/{position_id}")
 def get_single_position(position_id: str):
@@ -64,9 +73,11 @@ def get_single_position(position_id: str):
     return {"status": "SUCCESS", "position": pos}
 
 @router.post("/flatten")
-def auto_flatten(is_paper: bool = True):
+async def auto_flatten(is_paper: bool = True):
     """Emergency or 3:15 PM auto-flatten all positions."""
-    return dhan_service.flatten_all_positions(is_paper=is_paper)
+    res = await asyncio.to_thread(dhan_service.flatten_all_positions, is_paper=is_paper)
+    asyncio.create_task(manager.broadcast_positions(is_paper=is_paper))
+    return res
 
 @router.get("/history")
 def get_trade_history(is_paper: Optional[bool] = None):
