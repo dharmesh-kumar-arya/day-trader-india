@@ -785,40 +785,42 @@ export const App: React.FC = () => {
         {mobileTab === 'analytics' && (
           <div className="flex-1 flex flex-col h-full bg-[#121722] overflow-hidden">
             {/* Analytics Tab Switcher */}
-            <div className="h-10 px-2 bg-[#0f131a] border-b border-[#242e42] flex items-center space-x-1 overflow-x-auto no-scrollbar shrink-0 select-none">
-              <button
-                onClick={() => setActiveBottomTab('timemachine')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded whitespace-nowrap cursor-pointer transition ${
-                  activeBottomTab === 'timemachine'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>Time Machine</span>
-              </button>
-              <button
-                onClick={() => setActiveBottomTab('smartmoney')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded whitespace-nowrap cursor-pointer transition ${
-                  activeBottomTab === 'smartmoney'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Landmark className="w-3.5 h-3.5" />
-                <span>Smart Money</span>
-              </button>
-              <button
-                onClick={() => setActiveBottomTab('catalysts')}
-                className={`flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded whitespace-nowrap cursor-pointer transition ${
-                  activeBottomTab === 'catalysts'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Newspaper className="w-3.5 h-3.5" />
-                <span>Announcements</span>
-              </button>
+            <div className="p-2 bg-[#0f131a] border-b border-[#242e42] shrink-0 select-none">
+              <div className="flex bg-[#121722] p-1 rounded-lg border border-[#242e42] overflow-x-auto no-scrollbar gap-1">
+                <button
+                  onClick={() => setActiveBottomTab('timemachine')}
+                  className={`flex-1 flex items-center justify-center space-x-1 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap cursor-pointer transition ${
+                    activeBottomTab === 'timemachine'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>Time Machine</span>
+                </button>
+                <button
+                  onClick={() => setActiveBottomTab('smartmoney')}
+                  className={`flex-1 flex items-center justify-center space-x-1 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap cursor-pointer transition ${
+                    activeBottomTab === 'smartmoney'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Landmark className="w-3.5 h-3.5" />
+                  <span>Smart Money</span>
+                </button>
+                <button
+                  onClick={() => setActiveBottomTab('catalysts')}
+                  className={`flex-1 flex items-center justify-center space-x-1 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap cursor-pointer transition ${
+                    activeBottomTab === 'catalysts'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Newspaper className="w-3.5 h-3.5" />
+                  <span>Catalysts</span>
+                </button>
+              </div>
             </div>
 
             {/* Analytics Tab Content */}

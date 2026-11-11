@@ -102,96 +102,107 @@ export const PositionsTable: React.FC<PositionsTableProps> = ({
 
   return (
     <div className="h-full bg-[#121722] p-3 flex flex-col border-t border-[#242e42] select-none text-xs">
-      {/* Header bar with Subtabs */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#242e42]">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <button
-            onClick={() => setSubTab('active')}
-            className={`font-bold uppercase tracking-wider px-2 py-1 rounded transition cursor-pointer text-xs ${
-              subTab === 'active'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            Active Positions ({positions.length})
-          </button>
-          <button
-            onClick={() => setSubTab('history')}
-            className={`font-bold uppercase tracking-wider px-2 py-1 rounded transition flex items-center space-x-1.5 cursor-pointer text-xs ${
-              subTab === 'history'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Database className="w-3.5 h-3.5" />
-            <span>SQLite Journal ({history.length || '•'})</span>
-          </button>
+      {/* Header bar with Segmented Control & Actions */}
+      <div className="pb-2.5 border-b border-[#242e42] space-y-2">
+        {/* Row 1: Segmented Control & Actions */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Segmented Control */}
+          <div className="flex bg-[#0f131a] p-1 rounded-lg border border-[#242e42]">
+            <button
+              onClick={() => setSubTab('active')}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                subTab === 'active'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Active ({positions.length})
+            </button>
+            <button
+              onClick={() => setSubTab('history')}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
+                subTab === 'history'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Journal ({history.length || '0'})</span>
+            </button>
+          </div>
 
-          {subTab === 'active' && positions.length > 0 && (
+          {/* Action Buttons */}
+          <div className="flex items-center space-x-1.5 shrink-0">
+            {subTab === 'history' && history.length > 0 && (
+              <button
+                onClick={exportToCsv}
+                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition flex items-center space-x-1 cursor-pointer shadow-sm"
+                title="Download CA Tax Ready CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Export Tax CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </button>
+            )}
+
+            {subTab === 'history' && (
+              <button
+                onClick={fetchHistory}
+                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-[11px] transition cursor-pointer"
+                title="Refresh SQLite trade journal"
+              >
+                Refresh
+              </button>
+            )}
+
+            {subTab === 'active' && secondsToSquareoff > 0 && (
+              <div className="hidden xs:flex items-center space-x-1 text-[11px] text-amber-400 font-mono font-semibold bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/30">
+                <AlertTriangle className="w-3 h-3 shrink-0" />
+                <span>Sq-off {formatTime(secondsToSquareoff)}</span>
+              </div>
+            )}
+
+            {subTab === 'active' && positions.length > 0 && (
+              <button
+                onClick={onFlattenAll}
+                className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] transition cursor-pointer shadow-sm"
+              >
+                Flatten All
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Metrics Strip */}
+        {subTab === 'history' && history.length > 0 && (
+          <div className="flex items-center space-x-2 text-[11px] overflow-x-auto no-scrollbar pt-0.5">
+            <span
+              className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${
+                totalNetRealizedPnl >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+              }`}
+            >
+              Net: {totalNetRealizedPnl >= 0 ? '+' : ''}₹{totalNetRealizedPnl.toFixed(2)}
+            </span>
+            <span className="text-slate-400 font-mono text-[11px] whitespace-nowrap">
+              Taxes: <span className="text-amber-400 font-bold">₹{totalChargesPaid.toFixed(2)}</span>
+            </span>
+            <span className="text-slate-400 font-mono text-[11px] whitespace-nowrap">
+              Win Rate: <span className="text-blue-400 font-bold">{winRate}%</span>
+            </span>
+          </div>
+        )}
+
+        {subTab === 'active' && positions.length > 0 && (
+          <div className="flex items-center space-x-2 text-[11px] pt-0.5">
             <span
               className={`font-mono font-bold text-xs px-2 py-0.5 rounded ${
                 totalUnrealizedPnl >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
               }`}
             >
-              MTM: {totalUnrealizedPnl >= 0 ? '+' : ''}₹{totalUnrealizedPnl.toFixed(2)}
+              Total MTM: {totalUnrealizedPnl >= 0 ? '+' : ''}₹{totalUnrealizedPnl.toFixed(2)}
             </span>
-          )}
-
-          {subTab === 'history' && history.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span
-                className={`font-mono font-bold px-2 py-0.5 rounded ${
-                  totalNetRealizedPnl >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                }`}
-              >
-                Net: {totalNetRealizedPnl >= 0 ? '+' : ''}₹{totalNetRealizedPnl.toFixed(2)}
-              </span>
-              <span className="text-slate-400 font-mono">
-                Taxes: <span className="text-amber-400 font-bold">₹{totalChargesPaid.toFixed(2)}</span>
-              </span>
-              <span className="text-slate-400 font-mono">
-                Win Rate: <span className="text-blue-400 font-bold">{winRate}%</span>
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          {subTab === 'history' && history.length > 0 && (
-            <button
-              onClick={exportToCsv}
-              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition flex items-center space-x-1 cursor-pointer shadow-sm"
-              title="Download CA Tax Ready CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Tax CSV</span>
-            </button>
-          )}
-
-          {subTab === 'history' && (
-            <button
-              onClick={fetchHistory}
-              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-[11px] transition cursor-pointer"
-            >
-              Refresh
-            </button>
-          )}
-
-          {secondsToSquareoff > 0 && subTab === 'active' && (
-            <div className="text-[11px] text-amber-400 font-mono font-semibold flex items-center space-x-1">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Auto-Squareoff in {formatTime(secondsToSquareoff)}</span>
-            </div>
-          )}
-          {positions.length > 0 && subTab === 'active' && (
-            <button
-              onClick={onFlattenAll}
-              className="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] transition cursor-pointer shadow-sm"
-            >
-              Flatten All
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Main Table Content */}
