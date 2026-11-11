@@ -22,3 +22,4 @@ cp "$DIR/frontend/android/app/build/outputs/apk/debug/app-debug.apk" "$DIR/daytr
 echo ""
 echo "✅ Build Complete!"
 echo "📱 APK generated at: $DIR/daytrader.apk"
+
