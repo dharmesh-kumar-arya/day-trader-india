@@ -634,7 +634,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen h-[100dvh] w-screen bg-[#0b0e14] text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-[100dvh] max-h-[100dvh] w-screen bg-[#0b0e14] text-slate-100 overflow-hidden font-sans">
       {/* Top Header */}
       <Header
         marketStatus={marketStatus}
@@ -824,10 +824,10 @@ export const App: React.FC = () => {
       {/* ======================================================== */}
       {/* MOBILE / TABLET WORKSPACE LAYOUT (Visible on < lg screens) */}
       {/* ======================================================== */}
-      <div className="lg:hidden flex-1 flex flex-col overflow-hidden">
+      <div className="lg:hidden flex-1 min-h-0 flex flex-col overflow-hidden">
         {/* Mobile Tab: Scanner */}
         {mobileTab === 'scanner' && (
-          <div className="flex-1 h-full overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <ScannerTable
               results={scannerResults}
               selectedSymbol={selectedSymbol}
@@ -842,8 +842,8 @@ export const App: React.FC = () => {
 
         {/* Mobile Tab: Chart (with quick buy/sell action bar) */}
         {mobileTab === 'chart' && (
-          <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-            <div className="flex-1 w-full overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+            <div className="flex-1 min-h-0 w-full overflow-hidden">
               <ChartStation
                 symbol={selectedSymbol}
                 candles={candles}
@@ -860,7 +860,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Floating Quick Action Bar for Instant Trading on Mobile */}
-            <div className="bg-[#121722]/95 backdrop-blur-md border-t border-[#242e42] px-3.5 py-2 flex items-center justify-between z-20 shrink-0">
+            <div className="bg-[#121722]/95 backdrop-blur-md border-t border-[#242e42] px-3.5 py-1.5 flex items-center justify-between z-20 shrink-0">
               <div className="flex items-center space-x-2">
                 <span className="font-bold text-xs text-white">{selectedSymbol}</span>
                 <span className="font-mono text-xs font-semibold text-emerald-400">
@@ -893,7 +893,7 @@ export const App: React.FC = () => {
 
         {/* Mobile Tab: Order Desk */}
         {mobileTab === 'order' && (
-          <div className="flex-1 h-full overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <OrderDesk
               tradePlan={tradePlan}
               riskCheck={riskCheck}
@@ -911,7 +911,7 @@ export const App: React.FC = () => {
 
         {/* Mobile Tab: Positions & Journal */}
         {mobileTab === 'positions' && (
-          <div className="flex-1 h-full overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <PositionsTable
               positions={positions}
               onFlattenAll={handleFlattenAll}
@@ -924,7 +924,7 @@ export const App: React.FC = () => {
 
         {/* Mobile Tab: Analytics (Time Machine, Smart Money, Announcements) */}
         {mobileTab === 'analytics' && (
-          <div className="flex-1 flex flex-col h-full bg-[#121722] overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col bg-[#121722] overflow-hidden">
             {/* Analytics Tab Switcher */}
             <div className="p-2 bg-[#0f131a] border-b border-[#242e42] shrink-0 select-none">
               <div className="flex bg-[#121722] p-1 rounded-lg border border-[#242e42] overflow-x-auto no-scrollbar gap-1">

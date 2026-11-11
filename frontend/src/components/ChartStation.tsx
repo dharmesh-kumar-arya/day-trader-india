@@ -381,7 +381,7 @@ export const ChartStation: React.FC<ChartStationProps> = ({
 
           {/* Live pulsing indicator */}
           <div
-            className={`hidden xs:flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2 py-0.5 rounded border text-[10px] font-mono transition-colors ${
+            className={`flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2 py-0.5 rounded border text-[10px] font-mono transition-colors ${
               isWsConnected
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
@@ -438,7 +438,7 @@ export const ChartStation: React.FC<ChartStationProps> = ({
       />
 
       {/* Main Canvas Container */}
-      <div ref={chartContainerRef} className="flex-1 w-full h-full relative" />
+      <div ref={chartContainerRef} className="flex-1 w-full min-h-0 relative" />
 
       {/* Loading Overlay */}
       {isLoading && (
