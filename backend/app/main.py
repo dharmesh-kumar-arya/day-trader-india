@@ -35,14 +35,22 @@ app.include_router(dhan_router)
 app.include_router(feeds_router)
 app.include_router(ws_router)
 
-@app.get("/")
-def root():
-    return {
-        "app": config.app_name,
-        "version": config.version,
-        "status": "ONLINE",
-        "current_time_ist": now_ist().strftime("%Y-%m-%d %H:%M:%S IST")
-    }
+# Standalone Static Frontend Serving (e.g. for Termux or direct execution without Nginx)
+import os
+from fastapi.staticfiles import StaticFiles
+
+_frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+if os.path.exists(_frontend_dist):
+    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend")
+else:
+    @app.get("/")
+    def root():
+        return {
+            "app": config.app_name,
+            "version": config.version,
+            "status": "ONLINE",
+            "current_time_ist": now_ist().strftime("%Y-%m-%d %H:%M:%S IST")
+        }
 
 # Background Daemon: Automated 15:15 IST Square-Off Worker, DB Init & WebSocket Live Ticker
 @app.on_event("startup")
