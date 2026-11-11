@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Day Trader India</string>
+    <string name="title_activity_main">Day Trader India</string>
+    <string name="package_name">com.daytrader.india</string>
+    <string name="custom_url_scheme">com.daytrader.india</string>
+</resources>

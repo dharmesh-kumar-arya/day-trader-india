@@ -71,14 +71,11 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Android Native Builds & APKs (Capacitor / Gradle)
-frontend/android/
-android/
 *.apk
 *.aab
 .gradle/
-build/
+**/build/
 local.properties
-capacitor.config.json
 
 # IDE & Editor Configurations
 .vscode/
